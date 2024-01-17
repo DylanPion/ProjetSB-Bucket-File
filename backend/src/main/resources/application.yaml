@@ -1,0 +1,12 @@
+spring:
+  data:
+    mongodb:
+      host: localhost
+      port: 27017
+      database: storage
+
+BucketProject:
+  filestore: /Users/dylanpion/Desktop/filestore
+  app:
+    jwtSecret: xhxhh137373uddjshkjqshfkjqhkfhilieufizefhiu
+    jwtExpirationMs: 86400000
