@@ -36,8 +36,6 @@ public class AuthTokenFilter extends OncePerRequestFilter {
             String jwt = parseJwt(request);
             // Vérifie et valide le token JWT
             if (jwt != null && jwtService.validateJwtToken(jwt)) {
-                // Vérifie si le token n'est pas expiré
-                if (!jwtService.isTokenExpired(jwt)) {
                     // Extrait le nom d'utilisateur du token
                     String username = jwtService.getUserNameFromJwtToken(jwt);
 
@@ -54,15 +52,6 @@ public class AuthTokenFilter extends OncePerRequestFilter {
 
                     // Définit l'authentification dans le contexte de sécurité
                     SecurityContextHolder.getContext().setAuthentication(authentication);
-                    System.out.println("Token Valide");
-                } else {
-                    System.out.println("Token Expiré");
-                    // Token expiré, déconnecte l'utilisateur (efface l'authentification)
-                    SecurityContextHolder.clearContext();
-                    response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Token expiré");
-                    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-                    return;
-                }
             }
         } catch (Exception e) {
             // En cas d'erreur, enregistre un message d'erreur

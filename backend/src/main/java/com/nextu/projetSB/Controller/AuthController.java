@@ -1,8 +1,11 @@
 package com.nextu.projetSB.Controller;
 
 import com.nextu.projetSB.Entities.*;
+import com.nextu.projetSB.Exceptions.TokenRefreshException;
 import com.nextu.projetSB.Repositories.UserRepository;
 import com.nextu.projetSB.Service.JwtService;
+import com.nextu.projetSB.Service.RefreshTokenService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -26,10 +29,12 @@ import java.util.stream.Collectors;
 public class AuthController {
 
     @Autowired
+    // Interface responsable de l'authentication
     private AuthenticationManager authenticationManager;
     private final UserRepository userRepository;
     private final PasswordEncoder encoder;
     private final JwtService jwtService;
+    private final RefreshTokenService refreshTokenService;
 
     /**
      * Endpoint pour l'inscription d'un nouvel utilisateur.
@@ -39,18 +44,15 @@ public class AuthController {
      */
     @PostMapping("/signup")
     public ResponseEntity<?> registerUser(@RequestBody SignUpRequest signUpRequest) {
-        // Création d'un nouvel utilisateur avec les informations fournies
         User user = new User();
         user.setLogin(signUpRequest.getLogin());
         user.setPassword(encoder.encode(signUpRequest.getPassword()));
         user.setLastName(signUpRequest.getLastName());
         user.setFirstName(signUpRequest.getFirstName());
 
-        // Enregistrement de l'utilisateur dans le repository
         userRepository.save(user);
 
-        // Retourne une réponse avec un message de réussite
-        return ResponseEntity.ok(new MessageResponse("User registered successfully!"));
+        return ResponseEntity.ok(new MessageResponse("Utilisateur inscrit avec success"));
     }
 
     /**
@@ -62,6 +64,8 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<?> authenticateUser(@RequestBody LoginRequest loginRequest) {
         // Authentification de l'utilisateur en utilisant le gestionnaire d'authentification
+        // authenticate prend en argument un objet authentication
+        // UsernamePasswordAuthenticationToken est un objet de springsecurity pour représenter l'authentication avec username et password
         Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(loginRequest.getLogin(), loginRequest.getPassword()));
 
@@ -71,9 +75,6 @@ public class AuthController {
         // Génération du token JWT
         String jwt = jwtService.generateJwtToken(authentication);
 
-        // Récupération de la date d'expiration du token
-        Date expirationDate = jwtService.getExpirationDateFromToken(jwt);
-
         // Récupération des détails de l'utilisateur authentifié
         UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
 
@@ -82,12 +83,38 @@ public class AuthController {
                 .map(item -> item.getAuthority())
                 .collect(Collectors.toList());
 
+        // Génération du token de rafraichissement
+       String refreshToken = refreshTokenService.generateRefreshToken(userDetails);
+
         // Retourne une réponse avec les informations du token JWT et de l'utilisateur
         return ResponseEntity.ok(new JwtResponse(jwt,
+                refreshToken,
                 userDetails.getId(),
                 userDetails.getUsername(),
                 userDetails.getFirstName(),
-                roles,
-                expirationDate));
+                roles));
+    }
+
+    /*
+    * Endpoint pour raffraichir le token jwt
+    * Récupération du RefreshToken,nous obtenons l'objet RefreshToken {id, user, token, expiryDate} à partir du Token brut
+    *  en utilisant RefreshTokenService. Vérification de la date d'expiration puis on génère un nouveau token à partir
+    * du champ user du RefreshToken
+     * */
+
+    @PostMapping("/refreshtoken")
+    public ResponseEntity<?> refreshtoken(@Valid @RequestBody TokenRefreshRequest request) {
+        String requestRefreshToken = request.getRefreshToken();
+
+        return refreshTokenService.findByToken(requestRefreshToken)
+                .map(refreshTokenService::verifyExpiration)
+                .map(RefreshToken::getUser)
+                .map(user -> {
+                    String token = jwtService.generateTokenFromUsername(user.getLogin());
+                    return ResponseEntity.ok(new TokenRefreshResponse(token, requestRefreshToken));
+                })
+                .orElseThrow(() -> new TokenRefreshException(requestRefreshToken,
+                        "Refresh token is not in database!"));
     }
 }
+

@@ -38,36 +38,7 @@ public class JwtService {
     }
 
     /**
-     * Récupère la date d'expiration à partir du token (à des fins de TEST).
-     *
-     * @param token Le token JWT.
-     * @return La date d'expiration du token.
-     */
-    public Date getExpirationDateFromToken(String token) {
-        Claims claims = Jwts.parser()
-                .setSigningKey(key())
-                .parseClaimsJws(token)
-                .getBody();
-
-        return claims.getExpiration();
-    }
-
-    /**
-     * Vérifie que le token n'est pas expiré.
-     *
-     * @param token Le token JWT.
-     * @return true si le token n'est pas expiré, sinon false.
-     */
-    public boolean isTokenExpired(String token) {
-        Claims claims = Jwts.parser().setSigningKey(jwtSecret).parseClaimsJws(token).getBody();
-        Date expirationDate = claims.getExpiration();
-        return expirationDate.before(new Date());
-    }
-
-    /**
      * Retourne la clé utilisée pour signer les tokens JWT.
-     *
-     * @return La clé utilisée pour signer les tokens JWT.
      */
     private Key key() {
         return Keys.hmacShaKeyFor(Decoders.BASE64.decode(jwtSecret));
@@ -104,6 +75,13 @@ public class JwtService {
             logger.error("La chaîne de revendications JWT est vide : {}", e.getMessage());
         }
 
+
         return false;
+    }
+
+    public String generateTokenFromUsername(String username) {
+        return Jwts.builder().setSubject(username).setIssuedAt(new Date())
+                .setExpiration(new Date((new Date()).getTime() + jwtExpirationMs)).signWith(SignatureAlgorithm.HS512, jwtSecret)
+                .compact();
     }
 }

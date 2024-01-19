@@ -20,7 +20,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 
 
 @Configuration
-@EnableMethodSecurity
+@EnableMethodSecurity // Active la sécurité basée sur les annotations pour les méthodes.
 @RequiredArgsConstructor
 // Configuration de sécurité pour l'applicaton
 public class WebSecurityConfig {

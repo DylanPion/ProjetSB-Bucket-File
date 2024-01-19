@@ -9,4 +9,6 @@ BucketProject:
   filestore: /Users/dylanpion/Desktop/filestore
   app:
     jwtSecret: xhxhh137373uddjshkjqshfkjqhkfhilieufizefhiu
-    jwtExpirationMs: 86400000
+    jwtRefreshSecret: jqhkfhilieufizefhiuxhxhh137373uddjshkjqshfhfkjqhkfhilieufizef
+    jwtExpirationMs: 600000
+    jwtRefreshExpirationMs: 900000
